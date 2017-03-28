@@ -3,67 +3,72 @@ title: "長庚大學 大數據分析方法 作業三"
 output: github_document
 ---
 
-## 作業說明 （繳交時請直接刪除這個章節）
-
-作業目的：練習初級爬蟲，並將爬蟲結果整理成資料框data.frame
-
-依下列指示，完成網站內文分析：
-
-- 爬取指定網站內容
-    - 學號結尾 0,4,8:[Ptt Tech_Job 版](https://www.ptt.cc/bbs/Tech_Job/index.html)
-    - 學號結尾 1,5,9:[Ptt NBA 版](https://www.ptt.cc/bbs/NBA/index.html)
-    - 學號結尾 2,6:[Ptt LoL 版](https://www.ptt.cc/bbs/LoL/index.html)
-    - 學號結尾 3,7:[Ptt movie 版](https://www.ptt.cc/bbs/movie/index.html)
-    
-- 試著爬出**至少100篇**文章（`30pt`）的**標題**、**推文數**與**作者ID**（各`10pt`）
-    - 資料框欄位名稱：
-        - **標題**：Title
-        - **推文數**：PushNum
-        - **作者ID**：Author
-    - 一頁只有20篇，該怎麼辦？
-        - 提示：使用for + rbind()將分批爬取出的資料結合
-        - 範例：dataframeAll<-rbind(dataframe1,dataframe2) 
-        - 參考：[6.6 資料組合](http://yijutseng.github.io/DataScienceRBook/manipulation.html#section-6.6)
-    
-- 將爬取出的資料輸出至Markdown報告中（`10pt`）
-    - 使用knitr::kable(資料框物件)整理輸出
-    
-- 用文字搭配程式碼解釋爬蟲結果 
-    - 共爬出幾篇文章標題？（程式碼與文字解釋各`5pt`）
-        - dim(), nrow(), str()皆可
-    - 哪個作者文章數最多？（程式碼與文字解釋各`5pt`）
-        - table()
-    - 其他爬蟲結果解釋（`10pt`）
-        - 試著找出有趣的現象，不一定要用程式碼搭配解釋，也可只用文字
-
-    
-
 ## 網站資料爬取
 ```{r}
-#這是R Code Chunk
-library(rvest) ##第一次使用要先安裝 install.packages("rvest")
-##read_html
-##html_nodes
-##html_text
+#install.packages("rvest")
+library(rvest)
+#install.packages("stringr")
+library(stringr)
+
+totalData<-NULL
+
+PttTech_Job<-"https://www.ptt.cc/bbs/Tech_Job/index.html"
+PttContent<-read_html(PttTech_Job)
+
+for(i in 1:51){
+  Title <- str_trim(PttContent %>% html_nodes(".title") %>% html_text())
+  PushNum <- PttContent %>% html_nodes(".nrec") %>% html_text()
+  Author <- PttContent %>% html_nodes(".author") %>% html_text()
+  
+  tempData<-data.frame(Title,PushNum,Author)
+  totalData<-rbind(totalData,tempData)
+  
+  PttPage<- PttContent %>% html_nodes(".btn") %>% html_attr("href")
+  PttTech_Job<-paste0("https://www.ptt.cc",PttPage[4])
+  PttContent<-read_html(PttTech_Job)
+}
 ```
 
 ## 爬蟲結果呈現
 ```{r}
-#這是R Code Chunk
-knitr::kable(iris) ##請將iris取代為上個步驟中產生的爬蟲資料資料框
+knitr::kable(totalData)
 ```
 
 ## 解釋爬蟲結果 
 ```{r}
-#這是R Code Chunk
+dim(totalData)
 ```
 
-解釋解釋解釋解釋
+dim()函數可顯示資料框列與行的長度，先顯示列，後顯示行，所以有1014個資料，所以有1014篇文章標題(2017/3/28  18:33)
 
 ```{r}
-#這是R Code Chunk
+sort(table(totalData$Author),decreasing = T)
 ```
+經排序過後比較容易看出每個作者文章持有數量，-所表示的是此文章被刪除的作者，
+如需要知道發文的作者必須找出totalData$Title欄位下每列[]裡面的作者名稱，
 
-解釋解釋解釋解釋
+wer11這位作者在1014篇文章中發了21篇，在我原本只找約500篇還沒有這個結果，
+找了這個人的發文http://www.ucptt.com/author/wer11
+發現發布的大多是新聞，還有似乎因為德州儀器的面試沒收到結果非常的崩潰，
+所以發布了許多相關文章。
 
-人工結論與解釋解釋解釋解釋解釋解釋解釋
+
+其他爬蟲結果解釋?
+```{r}
+sort(table(totalData$Title),decreasing = T)
+```
+Ptt發文，然後有人用發文方式回覆前面會加上"Re:"+原標題， 
+sort(table(totalData$Title),decreasing = T)
+將文章標題依照數量序排下來可看出最多人回覆的文章標題是什麼，
+可能那就是當時期Tech_Job比較多人討論的議題，下列兩個擁有最顯著的回覆數
+Re: [請益] 另一半認為, 7:00下班是不顧家庭 
+                                             13 
+Re: [請益] 嘴砲真的大於專業能力嗎？ 
+                                             12 
+                                             
+不過其實我原本只是要找出被刪掉最多文章的作者是誰，
+因為它會顯示"(本文已被刪除) [作者ID名稱]"，
+然後看被刪除文章比較多數量的是哪個作者，
+再看看他是否與被水桶的有相關性XDD
+結果反而最多的是回覆文章的議題想法之類的
+看來Tech_Job是個非常溫馨的版(?
